@@ -366,9 +366,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0c5fe16cdcc36443807b294c44ed417, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveWithDB: 1
+  moveWithDB: 0
   dbTreshold: 20
-  moveWithBlow: 0
+  moveWithBlow: 1
 --- !u!4 &1047596530
 Transform:
   m_ObjectHideFlags: 0
