@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 
-public class AudioShip : MonoBehaviour {
+public class AudioSea : MonoBehaviour {
 	
 	// VARIABLES GLOBALES
 	private AudioSource audioSource;
@@ -13,6 +13,13 @@ public class AudioShip : MonoBehaviour {
     private const float REFVALUE = 0.00045f;
     private const int NB_SAMPLES_MEAN = 4;
     private List<float> sampleBuffer;
+
+    public bool moveWithDB;
+    public float dbTreshold;
+    public bool moveWithBlow;
+
+    private List<SpriteRenderer> seaParts;
+    private Camera mainCamera;
 
     private float[] trame;
 	
@@ -30,6 +37,13 @@ public class AudioShip : MonoBehaviour {
 		this.audioSource = GetComponent<AudioSource>();
 		StartMicListener();
         sampleBuffer = new List<float>();
+
+        mainCamera = Camera.main;
+
+        seaParts = new List<SpriteRenderer>();
+
+        seaParts = GetComponentsInChildren<SpriteRenderer>().ToList();
+        seaParts = seaParts.OrderBy(t => t.transform.position.y).ToList();
     }
 
     // Update is called once per frame
@@ -58,6 +72,29 @@ public class AudioShip : MonoBehaviour {
 		}
 	}
 	
+    private void MoveSea(float speed)
+    {
+        for (int i = 0; i < seaParts.Count; i++)
+        {
+            seaParts[i].transform.position -= new Vector3(0.0f, speed, 0.0f);
+        }
+        SpriteRenderer firstChild = seaParts.FirstOrDefault();
+        if (!IsVisibleFromMainCamera(firstChild))
+        {
+            SpriteRenderer lastChild = seaParts.LastOrDefault();
+
+            Vector3 lastPosition = lastChild.transform.position;
+            Vector3 lastSize = lastChild.bounds.size;
+
+            firstChild.transform.position = new Vector3(firstChild.transform.position.x,
+                                                         lastPosition.y + lastSize.y,
+                                                         firstChild.transform.position.z);
+
+            seaParts.Remove(firstChild);
+            seaParts.Add(firstChild);
+        }
+    }
+
 	// Votre Fonction
 	// -------------------------------
 	private void votreFonction(){
@@ -66,29 +103,43 @@ public class AudioShip : MonoBehaviour {
         float rms = ComputeRMSValue(trame);
         if(rms != 0f)
         {
-
-            //Place the particules according to autocorelated trame
-            float[] trameAutoCor = new float[NB_SAMPLES];
-            trameAutoCor = GetAutoCorrelation(trame);
-
-            //Make the line move if their is a period
-            var localMax = LocalMaximas(trameAutoCor);
-
-            localMax = localMax.OrderByDescending(e => e.Value).ToList();
-            float pitch = 0.0f;
-
-            if (localMax[1].Value > localMax[0].Value * 0.55f)
+            if (moveWithDB)
             {
-                float period = Mathf.Abs(localMax[0].Key - localMax[1].Key);
-                print(localMax[0].Value);
-                pitch = (1 / period) * FREQUENCY;
-
-                float pitchMapped = MapBetween(pitch, 0.0f, 1000.0f, 0.0f, 40.0f);
-                transform.position += new Vector3(0.0f, pitch / , 0.0f);
+                float db = ComputeDecibelLevel(rms);
+                if(db > dbTreshold)
+                {
+                    db = MapBetween(db, -30.0f, 100.0f, 0.0f, 10.0f);
+                    MoveSea(db);
+                }
             }
+            else if(moveWithBlow)
+            {
 
-
+            }
         }
+        //if(rms != 0f)
+        //{
+
+        //    //Place the particules according to autocorelated trame
+        //    float[] trameAutoCor = new float[NB_SAMPLES];
+        //    trameAutoCor = GetAutoCorrelation(trame);
+
+        //    //Make the line move if their is a period
+        //    var localMax = LocalMaximas(trameAutoCor);
+
+        //    localMax = localMax.OrderByDescending(e => e.Value).ToList();
+        //    float pitch = 0.0f;
+
+        //    if (localMax[1].Value > localMax[0].Value * 0.55f)
+        //    {
+        //        float period = Mathf.Abs(localMax[0].Key - localMax[1].Key);
+        //        print(localMax[0].Value);
+        //        pitch = (1 / period) * FREQUENCY;
+
+        //        float pitchMapped = MapBetween(pitch, 0.0f, 1000.0f, 0.0f, 40.0f);
+        //        transform.position += new Vector3(0.0f, pitch / , 0.0f);
+        //    }
+        //}
 
     }
 
@@ -166,5 +217,11 @@ public class AudioShip : MonoBehaviour {
         }
 
         return maxima;
+    }
+
+    public bool IsVisibleFromMainCamera(Renderer renderer)
+    {
+        Plane[] planes = GeometryUtility.CalculateFrustumPlanes(mainCamera);
+        return GeometryUtility.TestPlanesAABB(planes, renderer.bounds);
     }
 }
