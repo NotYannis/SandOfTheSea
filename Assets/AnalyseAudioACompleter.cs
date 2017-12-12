@@ -106,7 +106,6 @@ public class AnalyseAudioACompleter : MonoBehaviour {
             if (localMax[1].Value > localMax[0].Value * 0.55f)
             {
                 float period = Mathf.Abs(localMax[0].Key - localMax[1].Key);
-                print(localMax[0].Value);
                 pitch = (1 / period) * FREQUENCY;
             
                 part[localMax[0].Key].startColor = Color.yellow;

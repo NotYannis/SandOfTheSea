@@ -103,9 +103,9 @@ public class AudioSea : MonoBehaviour {
         float rms = ComputeRMSValue(trame);
         if(rms != 0f)
         {
+            float db = ComputeDecibelLevel(rms);
             if (moveWithDB)
             {
-                float db = ComputeDecibelLevel(rms);
                 if(db > dbTreshold)
                 {
                     db = MapBetween(db, -30.0f, 100.0f, 0.0f, 10.0f);
@@ -114,33 +114,27 @@ public class AudioSea : MonoBehaviour {
             }
             else if(moveWithBlow)
             {
+                //Place the particules according to autocorelated trame
+                float[] trameAutoCor = new float[NB_SAMPLES];
+                trameAutoCor = GetAutoCorrelation(trame);
 
+                //Make the line move if their is a period
+                var localMax = LocalMaximas(trameAutoCor);
+
+                localMax = localMax.OrderByDescending(e => e.Value).ToList();
+                float pitch = 0.0f;
+
+                if (localMax[1].Value < localMax[0].Value * 0.55f && db > dbTreshold)
+                {
+                    float period = Mathf.Abs(localMax[0].Key - localMax[1].Key);
+                    //print(localMax[0].Value);
+                    pitch = (1 / period) * FREQUENCY;
+                    float pitchMapped = MapBetween(pitch, 0.0f, 1000.0f, 0.0f, 40.0f);
+                    MoveSea(pitchMapped);
+                    //transform.position += new Vector3(0.0f, pitch / 2.0f, 0.0f);
+                }
             }
         }
-        //if(rms != 0f)
-        //{
-
-        //    //Place the particules according to autocorelated trame
-        //    float[] trameAutoCor = new float[NB_SAMPLES];
-        //    trameAutoCor = GetAutoCorrelation(trame);
-
-        //    //Make the line move if their is a period
-        //    var localMax = LocalMaximas(trameAutoCor);
-
-        //    localMax = localMax.OrderByDescending(e => e.Value).ToList();
-        //    float pitch = 0.0f;
-
-        //    if (localMax[1].Value > localMax[0].Value * 0.55f)
-        //    {
-        //        float period = Mathf.Abs(localMax[0].Key - localMax[1].Key);
-        //        print(localMax[0].Value);
-        //        pitch = (1 / period) * FREQUENCY;
-
-        //        float pitchMapped = MapBetween(pitch, 0.0f, 1000.0f, 0.0f, 40.0f);
-        //        transform.position += new Vector3(0.0f, pitch / , 0.0f);
-        //    }
-        //}
-
     }
 
     private float ComputeRMSValue(float[] trame)
